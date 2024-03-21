@@ -238,7 +238,7 @@ for iP = 1:numel(p.gratingPhases)
         grating = rd_grating(ppd, p.imSize(1), spatialFrequency, orientation, phase, contrast);
         
         ims{iP,iC} = rd_aperture(grating, p.aperture, gratingRadius, edgeWidth, p.angularFreq);
-        texs(iP,iC) = Screen('MakeTexture', window, ims{iP,iC}*white);
+        texs(iP,iC) = Screen('MakeTexture', window, cat(3,ims{iP,iC}*white, (ims{iP,iC}~=0.5)*255));
     end
 end
 
@@ -388,19 +388,14 @@ if p.eyeTracking
     rd_eyeLink('startrecording',window,{el,fixRect});
 end
 
+
+Screen('BlendFunction', window, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 %% Example image and tones
 % Wait for a button press
 
 Screen('FillRect', window, p.backgroundColor*white);
-drawPlaceholders(window, white, p.backgroundColor*white, phRect, p.phLineWidth, p.showPlaceholders, p.ringColor*white)
+drawPlaceholders(window, white, p.backgroundColor*white, phRect, p.phLineWidth, p.showPlaceholders, p.ringColor*white);
 drawFixation(window, cx, cy, p.fixSize, p.fixColor*white);
-
-if p.showPlaceholders==2
-    phMaskIm = Screen('GetImage', window);
-    maskAlpha = (phMaskIm(:,:,1) ~= p.ringColor)*255;
-    phMaskIm = cat(3, phMaskIm, maskAlpha);
-    phMask = Screen('MakeTexture', window, phMaskIm);
-end
 
 DrawFormattedText(window, 'Press 1 to start', 'center', textY, [1 1 1]*white);
 Screen('Flip', window);
@@ -430,10 +425,9 @@ end
 destRect = imRect(1,:);
 tex = texs(1,2);
 orientation = 0;
-% drawPlaceholders(window, white, p.backgroundColor*white, phRect, p.phLineWidth, p.showPlaceholders, p.ringColor*white)
-% Screen('DrawTexture', window, tex, [], destRect, orientation);
-% drawFixation(window, cx, cy, p.fixSize, p.fixColor*white);
-drawStimuli(p, window, tex, destRect, p.fixColor, orientation, phMask, phRect, white, cx, cy)
+drawPlaceholders(window, white, p.backgroundColor*white, phRect, p.phLineWidth, p.showPlaceholders, p.ringColor*white)
+Screen('DrawTexture', window, tex, [], destRect, orientation);
+drawFixation(window, cx, cy, p.fixSize, p.fixColor*white);
 
 timeSampleIm = Screen('Flip', window);
 
@@ -576,7 +570,7 @@ for iTrial = 1:nTrials
                 triggerTimes = [triggerTimes; p.triggers.response GetSecs];
             end
         end
-        if p.eyeTracking
+        if p.monitorFix
             isFix = rd_eyeLink('fixcheck', window, {cx, cy, rad});
             if ~isFix
                 iti = iti+(GetSecs-frameTime);
